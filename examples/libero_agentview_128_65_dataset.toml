@@ -1,0 +1,9 @@
+# Fixed-size LIBERO agentview video dataset for Wan image-to-video training.
+# The converted dataset contains 5000 videos. Of those, 4995 have >=65 frames and 5 are shorter,
+# so those 5 shorter clips will be skipped by diffusion-pipe.
+
+size_buckets = [[128, 128, 65]]
+
+[[directory]]
+path = '/projects/standard/kdesingh/shared/liu03222/datasets/Libero/libero_diffusion_pipe_agentview'
+num_repeats = 1

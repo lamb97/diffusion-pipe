@@ -1,0 +1,7 @@
+# UR5e pick-place validation split for Wan image-to-video training.
+
+size_buckets = [[224, 224, 65]]
+
+[[directory]]
+path = '/projects/standard/kdesingh/shared/liu03222/ur5e_diffusion_pipe_pick_place_224_split/valid'
+num_repeats = 1

@@ -108,6 +108,7 @@ class WanPipeline(BasePipeline):
             self.framerate = 24
         else:
             skyreels = False
+        self.framerate = self.model_config.get('framerate', self.framerate)
 
         with open(self.original_model_config_path) as f:
             self.json_config = json.load(f)
@@ -150,6 +151,7 @@ class WanPipeline(BasePipeline):
                     wan_config.clip_model = 'clip_xlm_roberta_vit_h_14'
                     wan_config.clip_dtype = torch.float16
                     wan_config.clip_checkpoint = 'models_clip_open-clip-xlm-roberta-large-vit-huge-14.pth'
+                    wan_config.clip_tokenizer = 'xlm-roberta-large'
                 elif model_dim == 5120:
                     wan_config = wan_configs.i2v_14B
                 else:

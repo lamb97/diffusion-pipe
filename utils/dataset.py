@@ -231,20 +231,35 @@ class SizeBucketDataset:
             regenerate_cache=regenerate_cache,
             caching_batch_size=caching_batch_size,
         )
-        assert len(self.latent_dataset) == len(self.metadata_dataset)
 
         iteration_order_cache_dir = self.cache_dir / 'iteration_order'
 
         if regenerate_cache or not iteration_order_cache_dir.exists() or not trust_cache:
             print('Building iteration order')
-            image_spec_to_latents_idx = {
-                tuple(image_spec): i
-                for i, image_spec in enumerate(self.metadata_dataset['image_spec'])
-            }
+            def iter_examples_with_columns(dataset_like, columns):
+                if hasattr(dataset_like, 'select_columns'):
+                    yield from dataset_like.select_columns(columns)
+                else:
+                    for i in range(len(dataset_like)):
+                        item = dataset_like[i]
+                        yield {key: item[key] for key in columns}
+
+            if len(self.latent_dataset) == len(self.metadata_dataset):
+                iteration_metadata = self.metadata_dataset
+                image_spec_to_latents_idx = {
+                    tuple(image_spec): i
+                    for i, image_spec in enumerate(self.metadata_dataset['image_spec'])
+                }
+            else:
+                # Some video clip modes can expand one metadata row into multiple latent rows.
+                # In that case, iterate over the latent cache directly while keeping the
+                # original image_spec/caption so text embeddings can still be reused.
+                iteration_metadata = self.latent_dataset
+                image_spec_to_latents_idx = None
 
             equal_num_captions = True
             num_captions = None
-            for example in self.metadata_dataset.select_columns(['caption']):
+            for example in iter_examples_with_columns(iteration_metadata, ['caption']):
                 n = len(example['caption'])
                 if num_captions is not None and n != num_captions:
                     equal_num_captions = False
@@ -255,12 +270,13 @@ class SizeBucketDataset:
                 # If all images have the same number of captions, set things up so we read (mostly) sequentially off disk. The metadata was already shuffled in the beginning.
                 iteration_order_by_caption_num = [[] for _ in range(num_captions)]
                 seed = 0
-                for example in self.metadata_dataset.select_columns(['image_spec', 'caption']):
+                for latents_idx, example in enumerate(iter_examples_with_columns(iteration_metadata, ['image_spec', 'caption'])):
                     image_spec = example['image_spec']
                     captions = example['caption']
                     shuffle_with_seed(captions, seed)
                     seed += 1
-                    latents_idx = image_spec_to_latents_idx[tuple(image_spec)]
+                    if image_spec_to_latents_idx is not None:
+                        latents_idx = image_spec_to_latents_idx[tuple(image_spec)]
                     for i, caption in enumerate(captions):
                         iteration_order_by_caption_num[i].append((image_spec, latents_idx, caption, i))
                 iteration_order_list = []
@@ -268,10 +284,11 @@ class SizeBucketDataset:
                     iteration_order_list.extend(l)
             else:
                 iteration_order_list = []
-                for example in self.metadata_dataset.select_columns(['image_spec', 'caption']):
+                for latents_idx, example in enumerate(iter_examples_with_columns(iteration_metadata, ['image_spec', 'caption'])):
                     image_spec = example['image_spec']
                     captions = example['caption']
-                    latents_idx = image_spec_to_latents_idx[tuple(image_spec)]
+                    if image_spec_to_latents_idx is not None:
+                        latents_idx = image_spec_to_latents_idx[tuple(image_spec)]
                     for i, caption in enumerate(captions):
                         iteration_order_list.append((image_spec, latents_idx, caption, i))
                 shuffle_with_seed(iteration_order_list, 42)

@@ -1,0 +1,53 @@
+# LIBERO -> Wan2.1-Fun-1.3B-InP image-to-video full fine-tuning config.
+# This is configured for 128x128 videos and 65-frame clips.
+#
+# IMPORTANT:
+# - Change ckpt_path to your local Wan2.1-Fun-1.3B-InP checkpoint directory.
+# - This is full fine-tuning: there is intentionally no [adapter] block.
+# - pipeline_stages = 2 is a good starting point for multi-GPU FFT.
+
+output_dir = '/users/6/liu03222/diffusion_pipe_training_runs/libero_wan_fun_1p3b_i2v_65_fft'
+dataset = '/users/6/liu03222/diffusion-pipe/examples/libero_agentview_128_65_dataset.toml'
+
+# training settings
+epochs = 1000
+micro_batch_size_per_gpu = 4
+pipeline_stages = 1
+gradient_accumulation_steps = 1
+gradient_clipping = 1.0
+warmup_steps = 100
+
+# eval settings
+eval_every_n_epochs = 2
+eval_before_first_step = false
+eval_micro_batch_size_per_gpu = 1
+eval_gradient_accumulation_steps = 1
+
+# misc settings
+save_every_n_epochs = 5
+checkpoint_every_n_minutes = 120
+activation_checkpointing = true
+partition_method = 'parameters'
+save_dtype = 'bfloat16'
+caching_batch_size = 1
+steps_per_print = 1
+video_clip_mode = 'single_beginning'
+
+[model]
+type = 'wan'
+ckpt_path = '/projects/standard/kdesingh/shared/liu03222/models/Wan2.1-Fun-1.3B-InP'
+dtype = 'bfloat16'
+timestep_sample_method = 'logit_normal'
+
+[optimizer]
+type = 'adamw_optimi'
+lr = 1e-5
+betas = [0.9, 0.99]
+weight_decay = 0.01
+eps = 1e-8
+
+[monitoring]
+enable_wandb = true
+wandb_api_key = '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'
+wandb_tracker_name = 'WAN'
+wandb_run_name = 'libero_65'
