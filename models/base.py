@@ -29,13 +29,16 @@ def make_contiguous(*tensors):
     
 
 
-def extract_clips(video, target_frames, video_clip_mode):
+def extract_clips(video, target_frames, video_clip_mode, pad_last_frame=False):
     # video is (channels, num_frames, height, width)
     frames = video.shape[1]
     if frames < target_frames:
-        # TODO: think about how to handle this case. Maybe the video should have already been thrown out?
-        print(f'video with shape {video.shape} is being skipped because it has less ({frames}) than the target_frames {target_frames}')
-        return []
+        if not pad_last_frame:
+            print(f'video with shape {video.shape} is being skipped because it has less ({frames}) than the target_frames {target_frames}')
+            return []
+        padding = video[:, -1:, ...].expand(-1, target_frames - frames, -1, -1)
+        video = torch.cat([video, padding], dim=1)
+        frames = target_frames
 
     if video_clip_mode == 'single_beginning':
         return [video[:, :target_frames, ...]]
@@ -72,6 +75,8 @@ class PreprocessMediaFile:
         self.config = config
         self.video_clip_mode = config.get('video_clip_mode', 'single_beginning')
         print(f'using video_clip_mode={self.video_clip_mode}')
+        self.video_clip_pad_last_frame = config.get('video_clip_pad_last_frame', False)
+        print(f'using video_clip_pad_last_frame={self.video_clip_pad_last_frame}')
         self.pil_to_tensor = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
         self.support_video = support_video
         self.framerate = framerate
@@ -156,7 +161,7 @@ class PreprocessMediaFile:
         if not is_video:
             return [(resized_video, mask)]
         else:
-            videos = extract_clips(resized_video, frames_rounded, self.video_clip_mode)
+            videos = extract_clips(resized_video, frames_rounded, self.video_clip_mode, self.video_clip_pad_last_frame)
             return [(video, mask) for video in videos]
 
 

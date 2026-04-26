@@ -7,6 +7,7 @@ import os
 import hashlib
 import json
 import tarfile
+import time
 from inspect import signature
 import sys
 sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), '../submodules/ComfyUI'))
@@ -75,6 +76,19 @@ def dedup_and_sort(values):
     values = list(values)
     values.sort()
     return np.array(values)
+
+
+def load_dataset_from_disk_with_retry(path, attempts=30, delay=1.0):
+    path = str(path)
+    for attempt in range(1, attempts + 1):
+        try:
+            return datasets.load_from_disk(path)
+        except (json.JSONDecodeError, FileNotFoundError, OSError) as e:
+            if attempt == attempts:
+                raise
+            if is_main_process() and attempt == 1:
+                logger.warning(f'Waiting for dataset cache to become readable: {path}. The exception was: {e}')
+            time.sleep(delay)
 
 
 def _map_and_cache(dataset, map_fn, cache_dir, cache_file_prefix='', new_fingerprint_args=None, regenerate_cache=False, caching_batch_size=1):
@@ -303,7 +317,7 @@ class SizeBucketDataset:
             iteration_order.save_to_disk(str(iteration_order_cache_dir))
             del iteration_order
 
-        self.iteration_order = datasets.load_from_disk(str(iteration_order_cache_dir))
+        self.iteration_order = load_dataset_from_disk_with_retry(iteration_order_cache_dir)
 
     def cache_text_embeddings(self, map_fn, i, regenerate_cache=False, caching_batch_size=1):
         print(f'caching text embeddings: {self.size_bucket}')
@@ -449,6 +463,7 @@ class DirectoryDataset:
         self.model_name = model_name
         self.framerate = framerate
         self.round_to_multiple = round_to_multiple
+        self.video_clip_pad_last_frame = dataset_config.get('video_clip_pad_last_frame', False)
         self.enable_ar_bucket = directory_config.get('enable_ar_bucket', dataset_config.get('enable_ar_bucket', False))
         # Configure directly from user-specified size buckets.
         self.size_buckets = directory_config.get('size_buckets', dataset_config.get('size_buckets', None))
@@ -544,7 +559,7 @@ class DirectoryDataset:
         for grouping_key in unique_grouping_keys:
             grouped_cache_dir = self.cache_dir / f'metadata/grouped_metadata_{bucket_suffix(grouping_key)}'
             print(f'Loading grouped metadata with grouping key {grouping_key}')
-            metadata = datasets.load_from_disk(str(grouped_cache_dir))
+            metadata = load_dataset_from_disk_with_retry(grouped_cache_dir)
             if self.use_size_buckets:
                 assert len(grouping_key) == 3
                 self.size_bucket_datasets.append(
@@ -693,7 +708,7 @@ class DirectoryDataset:
             del metadata_dataset
 
         print('Loading intermediate metadata dataset.')
-        metadata_dataset = datasets.load_from_disk(str(metadata_cache_file_1))
+        metadata_dataset = load_dataset_from_disk_with_retry(metadata_cache_file_1)
 
         metadata_map_fn = self._metadata_map_fn()
         print('Caching ungrouped metadata.')
@@ -837,7 +852,7 @@ class DirectoryDataset:
             if is_video and size_bucket[-1] == 1:
                 # don't let video be mapped to the image frame bucket
                 continue
-            if frames >= size_bucket[-1]:
+            if frames >= size_bucket[-1] or (is_video and self.video_clip_pad_last_frame):
                 found = True
                 break
         if not found:
@@ -911,6 +926,8 @@ class Dataset:
         self.eval_quantile = None
         if not skip_dataset_validation:
             self.model.model_specific_dataset_config_validation(self.dataset_config)
+        if 'video_clip_pad_last_frame' in self.model.config:
+            self.dataset_config.setdefault('video_clip_pad_last_frame', self.model.config['video_clip_pad_last_frame'])
 
         self.directory_datasets = []
         for directory_config in dataset_config['directory']:
@@ -1177,9 +1194,9 @@ class DatasetManager:
                     model.to('meta')
             mm.unload_all_models()  # Comfy managed models
 
-        dist.barrier()
         if is_main_process():
             process.join()
+        dist.barrier()
 
         # Now load all datasets from cache.
         for ds in self.datasets:

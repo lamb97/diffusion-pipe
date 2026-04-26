@@ -181,7 +181,6 @@ def load_clip_from_video(preprocessor, video_path: Path, size_bucket):
 def save_video_tensor(video, output_path: Path, fps: int):
     assert video.ndim == 5 and video.shape[0] == 1, video.shape
     video = video.squeeze(0).detach().cpu().to(torch.float32)
-    video = torch.rot90(video, 2, dims=(-2, -1))
     video = ((video + 1.0) / 2.0).clamp(0, 1)
     video = (video * 255).to(torch.uint8)
     video = video.permute(1, 2, 3, 0).contiguous().numpy()
@@ -191,7 +190,6 @@ def save_video_tensor(video, output_path: Path, fps: int):
 def save_first_frame(video, output_path: Path):
     assert video.ndim == 5 and video.shape[0] == 1, video.shape
     frame = video.squeeze(0)[:, 0].detach().cpu().to(torch.float32)
-    frame = torch.rot90(frame, 2, dims=(-2, -1))
     frame = ((frame + 1.0) / 2.0).clamp(0, 1)
     pil_image = torchvision.transforms.functional.to_pil_image(frame)
     pil_image.save(output_path)

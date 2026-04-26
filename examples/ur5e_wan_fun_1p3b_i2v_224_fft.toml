@@ -1,7 +1,7 @@
 # UR5e pick-place -> Wan2.1-Fun-1.3B-InP image-to-video full fine-tuning config.
 # Same training strategy as the previous LIBERO Wan FFT run, but using 224x224 videos.
 
-output_dir = '/projects/standard/kdesingh/shared/liu03222/diffusion_pipe_training_runs/ur5e_wan_fun_1p3b_i2v_224_fft'
+output_dir = '/projects/standard/kdesingh/shared/liu03222/diffusion_pipe_training_runs/0425_fps5_ur5e_wan_fun_1p3b_i2v_224_fft'
 dataset = '/users/6/liu03222/diffusion-pipe/examples/shared_account_pick_place_224_dataset.toml'
 eval_datasets = [
     {name = 'valid', config = '/users/6/liu03222/diffusion-pipe/examples/ur5e_pick_place_224_valid_dataset.toml'},
@@ -16,27 +16,28 @@ gradient_clipping = 1.0
 warmup_steps = 100
 
 # eval settings
-eval_every_n_epochs = 2
+eval_every_n_epochs = 4
 eval_before_first_step = false
 eval_micro_batch_size_per_gpu = 1
 eval_gradient_accumulation_steps = 1
 
 # misc settings
-save_every_n_epochs = 5
+save_every_n_epochs = 30
 checkpoint_every_n_minutes = 120
 activation_checkpointing = true
 partition_method = 'parameters'
 save_dtype = 'bfloat16'
 caching_batch_size = 1
 steps_per_print = 1
-video_clip_mode = 'multiple_overlapping'
+video_clip_mode = 'single_beginning'
+video_clip_pad_last_frame = true
 
 [model]
 type = 'wan'
 ckpt_path = '/projects/standard/kdesingh/shared/liu03222/models/Wan2.1-Fun-1.3B-InP'
 dtype = 'bfloat16'
 timestep_sample_method = 'logit_normal'
-framerate = 10
+framerate = 5
 
 [optimizer]
 type = 'adamw_optimi'
@@ -49,4 +50,4 @@ eps = 1e-8
 enable_wandb = true
 wandb_api_key = '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'
 wandb_tracker_name = 'WAN'
-wandb_run_name = 'ur5e_pick_place_224'
+wandb_run_name = 'ur5e_pick_place_224_0425_fps5'
