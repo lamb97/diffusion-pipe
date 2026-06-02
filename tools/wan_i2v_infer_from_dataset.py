@@ -149,7 +149,8 @@ def collect_dataset_videos(dataset_config):
 
 def choose_sample(args, dataset_config):
     if args.sample_path is not None:
-        sample_path = args.sample_path.expanduser().resolve()
+        # Use absolute() not resolve() so symlinked dataset paths keep their .txt sibling.
+        sample_path = args.sample_path.expanduser().absolute()
         if not sample_path.exists():
             raise FileNotFoundError(f"Sample video path does not exist: {sample_path}")
         return sample_path
@@ -370,7 +371,8 @@ def main():
 
     run_name = checkpoint_dir.parent.name
     model_name = checkpoint_dir.name
-    output_dir = args.output_dir / f"{run_name}_{model_name}_{sample_path.stem}"
+    sample_id = f"{sample_path.parent.name}_{sample_path.stem}"
+    output_dir = args.output_dir / f"{run_name}_{model_name}_{sample_id}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     save_video_tensor(decoded, output_dir / "generated.mp4", fps=pipeline.framerate)

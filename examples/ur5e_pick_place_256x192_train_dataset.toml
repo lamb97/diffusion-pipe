@@ -1,0 +1,24 @@
+# UR5e pick-place 3-task train split for Wan2.1-Fun-1.3B-InP i2v training.
+# Fixed 256x192 (4:3) spatial bucket, 41 frames temporal.
+
+size_buckets = [[256, 192, 41]]
+
+# bowl (~180 train trajs after 9:1 split)
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/bowl'
+num_repeats = 1
+
+# cup (~65 train trajs); repeated 3x to balance against bowl (~180)
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/cup'
+num_repeats = 3
+
+# penCase (~67 train trajs); repeated 3x to balance against bowl (~180)
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/penCase'
+num_repeats = 3
+
+# bowlBox (~54 train trajs); repeated 3x to balance against bowl (~180)
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/bowlBox'
+num_repeats = 3

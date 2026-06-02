@@ -1,0 +1,20 @@
+# UR5e pick-place 4-task train split, original 224x224x65 spatial/temporal bucket.
+# Same source video files as 256x192_41f config; different size_bucket triggers fresh latent cache.
+
+size_buckets = [[224, 224, 65]]
+
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/bowl'
+num_repeats = 1
+
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/cup'
+num_repeats = 3
+
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/penCase'
+num_repeats = 3
+
+[[directory]]
+path = '/home/riftuser/datasets/diffusion_pipe/train/bowlBox'
+num_repeats = 3

@@ -1,6 +1,6 @@
-# UR5e pick-place 4-task valid split, original 224x224x65 spatial/temporal bucket.
+# UR5e pick-place 3-task valid split (every 10th traj from each task).
 
-size_buckets = [[224, 224, 65]]
+size_buckets = [[256, 192, 41]]
 
 [[directory]]
 path = '/home/riftuser/datasets/diffusion_pipe/val/bowl'
